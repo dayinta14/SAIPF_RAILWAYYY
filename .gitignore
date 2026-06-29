@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Testing dan cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Database lokal
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+# File upload dan hasil proses
+data/uploads/*
+data/processed/*
+
+# Pertahankan folder kosong di GitHub
+!data/uploads/.gitkeep
+!data/processed/.gitkeep
+
+# Log
+*.log
+
+# Editor
+.vscode/
+.idea/
+
+# Sistem operasi
+.DS_Store
+Thumbs.db
+
+# Build
+build/
+dist/
+*.egg-info/

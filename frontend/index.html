@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Frontend SAIPF untuk upload PDF/foto, verifikasi hasil OCR, edit data, dan simpan ke SQLite." />
+  <title>SAIPF — Verifikasi Dokumen Inspeksi</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="page-shell">
+    <header class="site-header">
+      <div class="brand">
+        <div class="brand-logo">S</div>
+        <div>
+          <p class="brand-overline">SISTEM AUTOMASI INSPEKSI PERALATAN PABRIK</p>
+          <h1>SAIPF Document Intelligence</h1>
+        </div>
+      </div>
+      <div id="backendStatus" class="connection connection-offline">
+        <span class="connection-dot"></span>
+        <span id="backendStatusText">Memeriksa backend…</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <span class="eyebrow">OCR • NLP • VERIFIKASI • SQLITE</span>
+          <h2>Upload dokumen inspeksi, cek hasilnya, lalu simpan data yang sudah benar.</h2>
+          <p>
+            User cukup memasukkan PDF atau foto. Setelah OCR selesai, popup verifikasi akan terbuka otomatis.
+            Metadata dan tabel elemen dapat diedit sebelum disimpan ke SQLite.
+          </p>
+        </div>
+
+        <div class="hero-flow" aria-label="Alur kerja">
+          <div><span>1</span><strong>Upload</strong><small>PDF atau foto</small></div>
+          <div><span>2</span><strong>OCR</strong><small>Ekstraksi otomatis</small></div>
+          <div><span>3</span><strong>Verifikasi</strong><small>Edit bila salah</small></div>
+          <div><span>4</span><strong>Simpan</strong><small>Masuk SQLite</small></div>
+        </div>
+      </section>
+
+      <section class="workspace-grid">
+        <article class="card upload-card">
+          <div class="card-heading">
+            <div>
+              <p class="section-label">DOKUMEN BARU</p>
+              <h3>Upload PDF atau foto inspeksi</h3>
+            </div>
+            <span class="file-types">PDF · JPG · PNG · WEBP · TIFF</span>
+          </div>
+
+          <form id="uploadForm">
+            <label id="dropzone" class="dropzone" for="documentInput">
+              <input
+                id="documentInput"
+                type="file"
+                name="file"
+                accept="application/pdf,image/png,image/jpeg,image/webp,image/tiff,.pdf,.jpg,.jpeg,.png,.webp,.tif,.tiff"
+                hidden
+              />
+              <div class="dropzone-icon">↑</div>
+              <strong>Tarik dokumen ke sini</strong>
+              <span>atau klik untuk memilih file</span>
+              <div id="selectedFileInfo" class="selected-file" hidden></div>
+            </label>
+
+            <div id="localPreview" class="local-preview" hidden>
+              <img id="imagePreview" alt="Pratinjau dokumen" hidden />
+              <iframe id="pdfPreview" title="Pratinjau PDF" hidden></iframe>
+            </div>
+
+            <button id="uploadButton" class="btn btn-primary btn-full" type="submit" disabled>
+              Mulai Proses OCR
+            </button>
+          </form>
+        </article>
+
+        <aside class="card status-card">
+          <div class="card-heading">
+            <div>
+              <p class="section-label">STATUS PROSES</p>
+              <h3 id="processTitle">Belum ada dokumen</h3>
+            </div>
+            <span id="processBadge" class="badge badge-idle">IDLE</span>
+          </div>
+
+          <div class="process-visual">
+            <div id="spinner" class="spinner" hidden></div>
+            <div class="process-message">
+              <strong id="processMessage">Pilih PDF atau foto untuk memulai.</strong>
+              <p id="processDetail">Backend akan membaca dokumen dan menyiapkan data verifikasi.</p>
+            </div>
+          </div>
+
+          <dl class="job-info">
+            <div><dt>Job ID</dt><dd id="jobIdText">—</dd></div>
+            <div><dt>Nama file</dt><dd id="jobFilenameText">—</dd></div>
+            <div><dt>Mesin OCR</dt><dd id="jobEngineText">—</dd></div>
+            <div><dt>Reliabilitas</dt><dd id="jobReliabilityText">—</dd></div>
+          </dl>
+        </aside>
+      </section>
+
+      <section class="card database-card">
+        <div class="card-heading">
+          <div>
+            <p class="section-label">DATABASE SQLITE</p>
+            <h3>Inspeksi yang sudah tersimpan</h3>
+          </div>
+          <button id="refreshInspections" class="btn btn-light btn-small" type="button">Muat ulang</button>
+        </div>
+        <div id="inspectionList" class="inspection-list empty-state">Belum ada data atau backend belum tersambung.</div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <div id="verificationModal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop"></div>
+    <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="verificationTitle">
+      <header class="modal-header">
+        <div>
+          <p class="section-label">VERIFIKASI HASIL OCR</p>
+          <h2 id="verificationTitle">Apakah data sudah benar?</h2>
+          <p id="verificationSubtitle">Bandingkan hasil ekstraksi dengan dokumen asli.</p>
+        </div>
+        <button id="closeVerification" class="icon-btn" type="button" aria-label="Tutup">×</button>
+      </header>
+
+      <div class="modal-body verification-layout">
+        <aside class="document-panel">
+          <div class="panel-title-row">
+            <h3>Dokumen asli</h3>
+            <span id="modalFilename" class="mini-chip">—</span>
+          </div>
+          <div class="document-preview">
+            <img id="modalImagePreview" alt="Dokumen yang diunggah" hidden />
+            <iframe id="modalPdfPreview" title="Dokumen PDF yang diunggah" hidden></iframe>
+            <div id="previewUnavailable" class="preview-empty">Pratinjau tidak tersedia untuk dokumen lama.</div>
+          </div>
+          <details class="raw-box">
+            <summary>Lihat teks OCR mentah</summary>
+            <pre id="rawText"></pre>
+          </details>
+        </aside>
+
+        <section class="review-panel">
+          <div class="ocr-metrics">
+            <div><span>Job ID</span><strong id="metricJobId">—</strong></div>
+            <div><span>Mesin</span><strong id="metricEngine">—</strong></div>
+            <div><span>Confidence</span><strong id="metricConfidence">—</strong></div>
+            <div><span>Reliabilitas</span><strong id="metricReliability">—</strong></div>
+          </div>
+
+          <div id="reviewWarning" class="warning-box" hidden></div>
+
+          <form id="verificationForm">
+            <input id="reviewJobId" type="hidden" />
+
+            <section class="form-block">
+              <div class="form-block-heading">
+                <div>
+                  <h3>Metadata inspeksi</h3>
+                  <p>Aktifkan mode edit bila ada data yang salah.</p>
+                </div>
+                <span id="editModeBadge" class="mini-chip">Mode lihat</span>
+              </div>
+
+              <div class="form-grid">
+                <label>Nomor Form<input id="formNo" data-editable type="text" disabled /></label>
+                <label>Revisi<input id="revision" data-editable type="text" disabled /></label>
+                <label>Equipment ID<input id="equipmentId" data-editable type="text" disabled required /></label>
+                <label>Nama Equipment<input id="equipmentName" data-editable type="text" disabled /></label>
+                <label>Lokasi / Area<input id="location" data-editable type="text" disabled /></label>
+                <label>Tipe Equipment<input id="equipmentType" data-editable type="text" disabled /></label>
+                <label>Tanggal Inspeksi<input id="inspectionDate" data-editable type="date" disabled /></label>
+                <label>Inspektor<input id="inspector" data-editable type="text" disabled required /></label>
+                <label>Metode<input id="method" data-editable type="text" disabled /></label>
+                <label>Status
+                  <select id="inspectionStatus" data-editable disabled>
+                    <option value="PENDING_REVIEW">PENDING_REVIEW</option>
+                    <option value="APPROVED">APPROVED</option>
+                    <option value="DRAFT">DRAFT</option>
+                    <option value="REJECTED">REJECTED</option>
+                  </select>
+                </label>
+                <label>Kondisi Keseluruhan
+                  <select id="overallCondition" data-editable disabled>
+                    <option value="">Belum ditentukan</option>
+                    <option value="A">A — Sangat Baik</option>
+                    <option value="B">B — Baik</option>
+                    <option value="C">C — Perlu Perhatian</option>
+                    <option value="D">D — Perlu Perbaikan</option>
+                    <option value="E">E — Kritis / Rusak</option>
+                  </select>
+                </label>
+              </div>
+              <label class="full-label">Rekomendasi<textarea id="recommendation" data-editable rows="3" disabled></textarea></label>
+            </section>
+
+            <section class="form-block">
+              <div class="form-block-heading table-heading">
+                <div>
+                  <h3>Elemen inspeksi</h3>
+                  <p>Kategori A–E dan temuan dapat diperbaiki.</p>
+                </div>
+                <div class="table-tools">
+                  <button id="addMissingButton" class="btn btn-warning btn-small edit-only" type="button" hidden>Tambah nomor hilang</button>
+                  <button id="addRowButton" class="btn btn-light btn-small edit-only" type="button" hidden>+ Tambah baris</button>
+                </div>
+              </div>
+
+              <div class="table-scroll">
+                <table class="review-table">
+                  <thead>
+                    <tr>
+                      <th>No.</th>
+                      <th>Tag</th>
+                      <th>Nama Elemen</th>
+                      <th>Kategori</th>
+                      <th>Temuan</th>
+                      <th class="edit-column">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="elementRows"></tbody>
+                </table>
+              </div>
+              <div id="categorySummary" class="category-summary"></div>
+            </section>
+          </form>
+        </section>
+      </div>
+
+      <footer class="modal-footer">
+        <button id="cancelReview" class="btn btn-light" type="button">Tutup</button>
+        <button id="editToggleButton" class="btn btn-secondary" type="button">Belum benar — Edit data</button>
+        <button id="confirmSaveButton" class="btn btn-primary" type="button">Sudah benar — Simpan ke SQLite</button>
+      </footer>
+    </section>
+  </div>
+
+  <div id="successModal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop"></div>
+    <section class="modal-dialog modal-small" role="dialog" aria-modal="true" aria-labelledby="successTitle">
+      <div class="success-icon">✓</div>
+      <h2 id="successTitle">Data berhasil disimpan</h2>
+      <p>Hasil inspeksi sudah masuk ke SQLite.</p>
+      <div class="saved-id">Inspection ID: <strong id="savedInspectionId">—</strong></div>
+      <button id="closeSuccess" class="btn btn-primary btn-full" type="button">Selesai</button>
+    </section>
+  </div>
+
+  <div id="detailModal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop"></div>
+    <section class="modal-dialog detail-dialog" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+      <header class="modal-header">
+        <div><p class="section-label">DETAIL SQLITE</p><h2 id="detailTitle">Detail inspeksi</h2></div>
+        <button id="closeDetail" class="icon-btn" type="button" aria-label="Tutup">×</button>
+      </header>
+      <div id="detailContent" class="modal-body"></div>
+    </section>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

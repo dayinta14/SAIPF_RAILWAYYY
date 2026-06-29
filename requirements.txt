@@ -1,0 +1,15 @@
+fastapi>=0.115,<1
+uvicorn[standard]>=0.34,<1
+python-multipart>=0.0.20,<1
+sqlalchemy>=2.0,<3
+pydantic>=2.10,<3
+pydantic-settings>=2.7,<3
+PyMuPDF>=1.25,<2
+opencv-python-headless>=4.10,<5
+numpy>=1.26,<3
+pytesseract>=0.3.13,<1
+rapidfuzz>=3.11,<4
+Pillow>=11,<13
+paddlepaddle>=3.0,<4
+paddleocr>=3.0,<4
+requests>=2.32,<3
