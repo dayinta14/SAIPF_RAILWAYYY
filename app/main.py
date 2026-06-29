@@ -1,4 +1,3 @@
-```python
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
@@ -15,29 +14,13 @@ from app.routers import dashboard, database_viewer, inspections, scans
 from app.webgl_integration import register_webgl
 
 
-# Folder frontend berada sejajar dengan folder app:
-#
-# SAIPF_RAILWAYYY/
-# ├── app/
-# │   └── main.py
-# └── frontend/
-#     ├── index.html
-#     └── dashboard.html
+# Folder frontend berada sejajar dengan folder app
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    """
-    Menjalankan proses inisialisasi ketika aplikasi mulai.
-
-    Proses yang dilakukan:
-    1. Membuat folder upload dan hasil pemrosesan.
-    2. Membuat seluruh tabel database jika belum tersedia.
-    3. Mengisi data warna kategori A-E.
-    """
     settings.ensure_directories()
-
     Base.metadata.create_all(bind=engine)
 
     with SessionLocal() as session:
@@ -59,10 +42,6 @@ app = FastAPI(
 )
 
 
-# ============================================================
-# CORS
-# ============================================================
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.cors_origins),
@@ -72,43 +51,20 @@ app.add_middleware(
 )
 
 
-# ============================================================
-# API ROUTERS
-# Semua router harus didaftarkan sebelum frontend di-mount.
-# ============================================================
-
-# API upload, proses OCR, polling job, dan konfirmasi hasil
+# API routers — wajib sebelum app.mount("/")
 app.include_router(scans.router)
-
-# API data inspeksi dan elemen hasil inspeksi
 app.include_router(inspections.router)
-
-# API untuk melihat data database
 app.include_router(database_viewer.router)
-
-# API statistik dan data dashboard historis
 app.include_router(dashboard.router)
 
 
-# ============================================================
-# SYSTEM ENDPOINTS
-# ============================================================
-
 @app.get("/health", tags=["System"])
 def health() -> dict[str, str]:
-    """
-    Health check untuk Railway.
-    """
-    return {
-        "status": "ok",
-    }
+    return {"status": "ok"}
 
 
 @app.get("/api/system", tags=["System"])
 def system_information() -> dict[str, str]:
-    """
-    Informasi dasar aplikasi.
-    """
     return {
         "name": settings.app_name,
         "version": settings.app_version,
@@ -119,26 +75,13 @@ def system_information() -> dict[str, str]:
     }
 
 
-# ============================================================
-# WEBGL
-# WebGL harus didaftarkan sebelum frontend dengan path "/".
-# ============================================================
-
+# WebGL harus didaftarkan sebelum mount frontend
 register_webgl(app)
 
 
-# ============================================================
-# FRONTEND
-# Mount "/" wajib berada paling bawah karena menjadi fallback
-# untuk seluruh file HTML, CSS, JavaScript, dan aset frontend.
-# ============================================================
-
+# Harus paling bawah karena "/" menjadi fallback frontend
 app.mount(
     "/",
-    StaticFiles(
-        directory=str(FRONTEND_DIR),
-        html=True,
-    ),
+    StaticFiles(directory=str(FRONTEND_DIR), html=True),
     name="frontend",
 )
-```
