@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard Historis SAIPF</title>
+  <meta name="description" content="Dashboard historis hasil scan dan inspeksi SAIPF.">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body class="dashboard-page">
+  <div class="dashboard-shell">
+    <header class="dashboard-header">
+      <div class="dashboard-brand">
+        <div class="brand-logo">S</div>
+        <div>
+          <p class="brand-overline">SISTEM AUTOMASI INSPEKSI PERALATAN PABRIK</p>
+          <h1>Dashboard Historis SAIPF</h1>
+        </div>
+      </div>
+
+      <nav class="dashboard-nav">
+        <a class="btn btn-light" href="/">Upload Dokumen</a>
+        <button id="refreshDashboard" class="btn btn-primary" type="button">Muat Ulang</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="dashboard-hero">
+        <div>
+          <p class="eyebrow">ANALISIS DATA INSPEKSI</p>
+          <h2>Pantau kondisi equipment dan temuan historis dari dokumen yang telah diverifikasi.</h2>
+          <p>Data dashboard berasal dari inspection, equipment, element inspection, dan scan job yang tersimpan di database.</p>
+        </div>
+        <div id="dashboardConnection" class="connection connection-offline">
+          <span class="connection-dot"></span>
+          <span id="dashboardConnectionText">Memuat data…</span>
+        </div>
+      </section>
+
+      <section class="dashboard-filter-card">
+        <div class="filter-heading">
+          <div>
+            <p class="section-label">FILTER DASHBOARD</p>
+            <h3>Pilih data historis yang ingin dianalisis</h3>
+          </div>
+          <button id="resetFilter" class="btn btn-light btn-small" type="button">Reset Filter</button>
+        </div>
+
+        <form id="dashboardFilterForm" class="dashboard-filter-grid">
+          <label>Dari tanggal
+            <input id="filterDateFrom" type="date">
+          </label>
+
+          <label>Sampai tanggal
+            <input id="filterDateTo" type="date">
+          </label>
+
+          <label>Plant
+            <select id="filterPlant">
+              <option value="">Semua plant</option>
+            </select>
+          </label>
+
+          <label>Section
+            <select id="filterSection">
+              <option value="">Semua section</option>
+            </select>
+          </label>
+
+          <label>Tipe equipment
+            <select id="filterEquipmentType">
+              <option value="">Semua tipe</option>
+            </select>
+          </label>
+
+          <label>Kondisi
+            <select id="filterCondition">
+              <option value="">Semua kondisi</option>
+              <option value="A">A — Sangat Baik</option>
+              <option value="B">B — Baik</option>
+              <option value="C">C — Perlu Perhatian</option>
+              <option value="D">D — Perlu Perbaikan</option>
+              <option value="E">E — Kritis / Rusak</option>
+            </select>
+          </label>
+
+          <label>Status
+            <select id="filterStatus">
+              <option value="">Semua status</option>
+            </select>
+          </label>
+
+          <button class="btn btn-primary filter-submit" type="submit">Terapkan Filter</button>
+        </form>
+      </section>
+
+      <section class="dashboard-kpi-grid">
+        <article class="dashboard-kpi">
+          <span>Total Scan</span>
+          <strong id="kpiTotalScans">0</strong>
+          <small>Seluruh dokumen yang diproses</small>
+        </article>
+
+        <article class="dashboard-kpi">
+          <span>Total Inspeksi</span>
+          <strong id="kpiTotalInspections">0</strong>
+          <small>Data yang telah disimpan</small>
+        </article>
+
+        <article class="dashboard-kpi">
+          <span>Total Equipment</span>
+          <strong id="kpiTotalEquipment">0</strong>
+          <small>Equipment unik</small>
+        </article>
+
+        <article class="dashboard-kpi dashboard-kpi-danger">
+          <span>Equipment Kritis</span>
+          <strong id="kpiCriticalEquipment">0</strong>
+          <small>Kondisi keseluruhan E</small>
+        </article>
+
+        <article class="dashboard-kpi dashboard-kpi-danger">
+          <span>Temuan Kritis</span>
+          <strong id="kpiCriticalFindings">0</strong>
+          <small>Elemen kategori E</small>
+        </article>
+
+        <article class="dashboard-kpi dashboard-kpi-warning">
+          <span>Menunggu Review</span>
+          <strong id="kpiPendingReview">0</strong>
+          <small>Scan belum dikonfirmasi</small>
+        </article>
+
+        <article class="dashboard-kpi">
+          <span>Inspeksi Bulan Ini</span>
+          <strong id="kpiThisMonth">0</strong>
+          <small>Jumlah inspeksi bulan berjalan</small>
+        </article>
+
+        <article class="dashboard-kpi">
+          <span>Reliabilitas OCR</span>
+          <strong id="kpiReliability">0%</strong>
+          <small>Rata-rata hasil scan</small>
+        </article>
+      </section>
+
+      <section class="dashboard-chart-grid">
+        <article class="dashboard-panel">
+          <div class="dashboard-panel-heading">
+            <div>
+              <p class="section-label">KONDISI INSPEKSI</p>
+              <h3>Distribusi kondisi A–E</h3>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="conditionChart"></canvas>
+          </div>
+        </article>
+
+        <article class="dashboard-panel">
+          <div class="dashboard-panel-heading">
+            <div>
+              <p class="section-label">TREN HISTORIS</p>
+              <h3>Jumlah inspeksi per bulan</h3>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="monthlyChart"></canvas>
+          </div>
+        </article>
+
+        <article class="dashboard-panel">
+          <div class="dashboard-panel-heading">
+            <div>
+              <p class="section-label">ELEMEN</p>
+              <h3>Distribusi kategori elemen</h3>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="elementChart"></canvas>
+          </div>
+        </article>
+
+        <article class="dashboard-panel">
+          <div class="dashboard-panel-heading">
+            <div>
+              <p class="section-label">PROSES OCR</p>
+              <h3>Status scan dokumen</h3>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="scanStatusChart"></canvas>
+          </div>
+        </article>
+      </section>
+
+      <section class="dashboard-panel">
+        <div class="dashboard-panel-heading">
+          <div>
+            <p class="section-label">PRIORITAS</p>
+            <h3>Equipment dan inspeksi kritis</h3>
+          </div>
+          <span id="criticalCountBadge" class="dashboard-badge">0 data</span>
+        </div>
+        <div class="dashboard-table-wrap">
+          <table class="dashboard-table">
+            <thead>
+              <tr>
+                <th>Equipment</th>
+                <th>Nama</th>
+                <th>Plant / Section</th>
+                <th>Tanggal</th>
+                <th>Kondisi</th>
+                <th>Temuan E</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="criticalTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="dashboard-bottom-grid">
+        <article class="dashboard-panel">
+          <div class="dashboard-panel-heading">
+            <div>
+              <p class="section-label">RIWAYAT INSPEKSI</p>
+              <h3>Inspeksi terbaru</h3>
+            </div>
+          </div>
+          <div id="recentInspectionList" class="dashboard-list"></div>
+        </article>
+
+        <article class="dashboard-panel">
+          <div class="dashboard-panel-heading">
+            <div>
+              <p class="section-label">RIWAYAT SCAN</p>
+              <h3>Dokumen terbaru</h3>
+            </div>
+          </div>
+          <div id="recentScanList" class="dashboard-list"></div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <div id="dashboardDetailModal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-dashboard-modal></div>
+    <section class="modal-dialog detail-dialog" role="dialog" aria-modal="true">
+      <header class="modal-header">
+        <div>
+          <p class="section-label">DETAIL INSPEKSI</p>
+          <h2 id="dashboardDetailTitle">Detail inspeksi</h2>
+        </div>
+        <button id="closeDashboardDetail" class="icon-btn" type="button">×</button>
+      </header>
+      <div id="dashboardDetailContent" class="modal-body"></div>
+    </section>
+  </div>
+
+  <div id="dashboardToastContainer" class="toast-container" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>
