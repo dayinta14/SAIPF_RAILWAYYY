@@ -17,6 +17,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
+RUN command -v tesseract \
+    && ls -l /usr/bin/tesseract \
+    && tesseract --version \
+    && tesseract --list-langs
+
 COPY requirements.txt .
 
 RUN python -m pip install --upgrade pip \

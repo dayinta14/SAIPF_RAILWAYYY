@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import json
 import math
 import os
@@ -24,10 +25,37 @@ from app.services.document_service import image_variants
 
 # Railway/Linux menggunakan /usr/bin/tesseract.
 # Saat dijalankan lokal di Windows, Tesseract tetap dapat ditemukan melalui PATH.
-tesseract_command = os.getenv("TESSERACT_CMD")
+configured_tesseract = (
+    os.getenv("TESSERACT_CMD", "")
+    .strip()
+    .strip('"')
+    .strip("'")
+)
 
-if tesseract_command:
-    pytesseract.pytesseract.tesseract_cmd = tesseract_command
+tesseract_candidates = [
+    configured_tesseract,
+    shutil.which("tesseract"),
+    "/usr/bin/tesseract",
+]
+
+resolved_tesseract = next(
+    (
+        candidate
+        for candidate in tesseract_candidates
+        if candidate and Path(candidate).is_file()
+    ),
+    None,
+)
+
+if resolved_tesseract:
+    pytesseract.pytesseract.tesseract_cmd = resolved_tesseract
+    print(f"[OCR] Tesseract ditemukan: {resolved_tesseract}")
+else:
+    print(
+        "[OCR ERROR] Tesseract tidak ditemukan. "
+        f"TESSERACT_CMD={configured_tesseract!r}, "
+        f"PATH_RESULT={shutil.which('tesseract')!r}"
+    )
 
 
 @dataclass
